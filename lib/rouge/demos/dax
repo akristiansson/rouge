@@ -1,0 +1,15 @@
+DEFINE
+MEASURE 'Internet Sales'[Internet Total Sales] = NORM.DIST('Internet Sales'[Sales Amount]) * 1.12
+EVALUATE
+/*
+This is a multi
+line comment
+*/
+SUMMARIZECOLUMNS
+(
+	'Date'[Calendar Year],
+	TREATAS({2013, 2014}, 'Date'[Calendar Year]),
+	"Total Sales", [Internet Total Sales],
+	"Combined Years Total Sales", CALCULATE([Internet Total Sales], ALLSELECTED(TableNameUnique[Calendar Year]))
+)
+ORDER BY [Calendar Year]

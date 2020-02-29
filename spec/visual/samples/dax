@@ -1,0 +1,59 @@
+// Example from https://docs.microsoft.com/en-us/dax/dax-queries
+DEFINE
+MEASURE 'Internet Sales'[Internet Total Sales] = NORM.DIST('Internet Sales'[Sales Amount]) * 1.12
+EVALUATE
+/*
+This is a multi
+line comment
+*/
+SUMMARIZECOLUMNS
+(
+	'Date'[Calendar Year],
+	TREATAS({@StartYear, @EndYear}, 'Date'[Calendar Year]),
+	"Total Sales", [Internet Total Sales],
+	"Combined Years Total Sales", CALCULATE([Internet Total Sales], ALLSELECTED(TableNameUnique[Calendar Year]))
+)
+ORDER BY [Calendar Year];
+
+// Example from https://akristiansson.github.io/dax/hyperbi.html
+Approximate Order Count @ Subset := 
+VAR m = 512 // Number of buckets
+VAR a variable shouldn't be like this = 0.7213 / (1.079 / m + 1) // Bias correcting constant 
+// 'Merge' the current context, we're aggregating by always working with the highest MSB in each group
+VAR MergeTable =
+    GROUPBY(
+        HLL,
+        [bucket_number],
+        "max_msb",
+        MAXX(CURRENTGROUP(), [bucket_msb])
+    )
+VAR EmptyBuckets=
+    m - COUNTROWS(MergeTable)
+VAR ApproximateCount =
+    DIVIDE(a * m^2, SUMX(MergeTable, 2^-[max_msb]) + EmptyBuckets, 0)
+VAR FinalCount = IF(
+    ApproximateCount < 2.5 * m && EmptyBuckets > 0,
+    a * m * LOG(m / EmptyBuckets, 2),
+    ApproximateCount
+)
+RETURN IF(
+    FinalCount = 0,
+    BLANK(),
+    ROUND(FinalCount, 0)
+);
+
+// Example from https://akristiansson.github.io/dax/gini.html
+Gini Coefficient = IF(
+  HASONEVALUE('DimTable'[Attribute]),
+  1,
+  VAR RankedTable = ADDCOLUMNS(
+    CALCULATETABLE('DimTable'),
+    "i",
+    RANKX('DimTable', [MyMetric], , ASC, Dense)
+  )
+  VAR n = COUNTROWS(RankedTable)
+  RETURN DIVIDE(
+    2 * SUMX(RankedTable, [i] * [MyMetric]),
+    n * SUMX(RankedTable, [MyMetric])
+  ) - DIVIDE(n + 1, n)
+);
